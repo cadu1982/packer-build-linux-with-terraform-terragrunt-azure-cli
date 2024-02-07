@@ -1,0 +1,59 @@
+name: "Build and Publish Image"
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+
+jobs:
+  Build-push-image:
+    runs-on: ubuntu-latest
+    env:
+      KEY_VAULT_NAME: <name key vault> #onde esta gravado os secrets 
+      
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3.0.0
+
+      - name: Azure Login
+        uses: Azure/login@v1.4.5
+        with:
+          creds: ${{ secrets.ABP1SPGHWF001 }}
+
+      - uses: Azure/get-keyvault-secrets@v1
+        with:
+          keyvault: "${{ env.KEY_VAULT_NAME }}"
+          secrets: "CLIENTID, CLIENTSECRET, SUBSCRIPTIONID, TENANTID"
+        id: GetSecretAction
+
+      - name: Replace Environment Variables PS1
+        run: envsubst < azure-linux.pkr.hcl > azure-linux-rplc.pkr.hcl
+        env:
+          CLIENTID: ${{ steps.GetSecretAction.outputs.CLIENTID }}
+          CLIENTSECRET: ${{ steps.GetSecretAction.outputs.CLIENTSECRET }}
+          SUBSCRIPTIONID: ${{ steps.GetSecretAction.outputs.SUBSCRIPTIONID }}
+          TENANTID: ${{ steps.GetSecretAction.outputs.TENANTID }}
+      
+      - name: Setup `packer`
+        uses: hashicorp/setup-packer@main
+        id: setup
+      
+      - name: Install Azure Packer Plugins 
+        run: packer plugins install github.com/hashicorp/azure
+
+      - name: Run `packer init`
+        id: init
+        run: "packer init ./azure-linux-rplc.pkr.hcl"
+      
+      - name: Run `packer validate`
+        id: validate
+        run: "packer validate ./azure-linux-rplc.pkr.hcl"
+      
+      - name: Build Artifact
+        run: packer build -color=false -on-error=abort ./azure-linux-rplc.pkr.hcl
+        
+
+      
+        
