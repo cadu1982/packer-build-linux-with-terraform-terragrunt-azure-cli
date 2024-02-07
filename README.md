@@ -2,4 +2,3 @@ https://learn.microsoft.com/en-us/azure/virtual-machines/linux/build-image-with-
 
 
 
-https://terragrunt.gruntwork.io/docs/getting-started/install/
